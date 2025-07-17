@@ -1,0 +1,1200 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>T2RUN WebSocket Pro</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    <link rel="canonical" href="https://t2run.org/tools/ws">
+    <!-- Global site tag (gtag.js) - Google Analytics -->
+    <script async src="https://www.googletagmanager.com/gtag/js?id=G-PR2RX5RMY5"></script>
+    <script>
+        window.dataLayer = window.dataLayer || [];
+        function gtag() { dataLayer.push(arguments); }
+        gtag('js', new Date());
+        gtag('config', 'G-PR2RX5RMY5');
+    </script>
+    <style>
+        :root {
+            --sidebar-width: 280px;
+            --sidebar-bg: #1a1d23;
+            --sidebar-text: #e4e6ea;
+            --sidebar-active: #0d6efd;
+            --sidebar-hover: #2a2d35;
+            --main-bg: #f8f9fa;
+            --border-color: #dee2e6;
+        }
+
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+            background-color: var(--main-bg);
+            overflow-x: hidden;
+        }
+
+        .sidebar {
+            position: fixed;
+            top: 0;
+            left: 0;
+            height: 100vh;
+            width: var(--sidebar-width);
+            background: var(--sidebar-bg);
+            color: var(--sidebar-text);
+            z-index: 1000;
+            transition: transform 0.3s ease;
+            box-shadow: 2px 0 10px rgba(0, 0, 0, 0.1);
+        }
+
+        .sidebar-header {
+            padding: 20px;
+            border-bottom: 1px solid #2a2d35;
+        }
+
+        .sidebar-header h4 {
+            margin: 0;
+            font-weight: 600;
+            color: #fff;
+        }
+
+        .sidebar-nav {
+            padding: 20px 0;
+        }
+
+        .nav-item {
+            margin: 0;
+        }
+
+        .nav-link {
+            color: var(--sidebar-text);
+            padding: 12px 20px;
+            border: none;
+            border-radius: 0;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            text-decoration: none;
+            width: 100%;
+            border-left: 3px solid transparent;
+        }
+
+        .nav-link:hover {
+            background-color: var(--sidebar-hover);
+            color: #fff;
+        }
+
+        .nav-link.active {
+            background-color: var(--sidebar-hover);
+            border-left-color: var(--sidebar-active);
+            color: #fff;
+        }
+
+        .nav-link i {
+            width: 20px;
+            margin-right: 10px;
+        }
+
+        .main-content {
+            margin-left: var(--sidebar-width);
+            min-height: 100vh;
+            padding: 20px;
+            transition: margin-left 0.3s ease;
+        }
+
+        .connection-status {
+            position: sticky;
+            top: 20px;
+            background: white;
+            border-radius: 8px;
+            padding: 15px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.1);
+            margin-bottom: 20px;
+            z-index: 100;
+        }
+
+        .status-indicator {
+            width: 12px;
+            height: 12px;
+            border-radius: 50%;
+            display: inline-block;
+            margin-right: 8px;
+            animation: pulse 2s infinite;
+        }
+
+        @keyframes pulse {
+            0% {
+                opacity: 1;
+            }
+
+            50% {
+                opacity: 0.5;
+            }
+
+            100% {
+                opacity: 1;
+            }
+        }
+
+        .status-connected {
+            background-color: #28a745;
+        }
+
+        .status-connecting {
+            background-color: #ffc107;
+        }
+
+        .status-disconnected {
+            background-color: #dc3545;
+            animation: none;
+        }
+
+        .tab-content {
+            display: none;
+        }
+
+        .tab-content.active {
+            display: block;
+        }
+
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 2px 20px rgba(0, 0, 0, 0.08);
+            margin-bottom: 20px;
+        }
+
+        .card-header {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            color: white;
+            border-radius: 12px 12px 0 0 !important;
+            padding: 15px 20px;
+            border: none;
+        }
+
+        .card-header h5 {
+            margin: 0;
+            font-weight: 600;
+        }
+
+        .message-log {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            background: #1a1d23;
+            color: #e4e6ea;
+            font-family: 'Fira Code', 'Courier New', monospace;
+            font-size: 13px;
+            line-height: 1.6;
+        }
+
+        .message-log::-webkit-scrollbar {
+            width: 8px;
+        }
+
+        .message-log::-webkit-scrollbar-track {
+            background: #2a2d35;
+            border-radius: 4px;
+        }
+
+        .message-log::-webkit-scrollbar-thumb {
+            background: #555;
+            border-radius: 4px;
+        }
+
+        .message-sent {
+            color: #61dafb;
+            margin-bottom: 8px;
+        }
+
+        .message-received {
+            color: #98d982;
+            margin-bottom: 8px;
+        }
+
+        .message-error {
+            color: #ff6b6b;
+            margin-bottom: 8px;
+        }
+
+        .message-info {
+            color: #ffd93d;
+            margin-bottom: 8px;
+        }
+
+        .timestamp {
+            color: #6c757d;
+            font-size: 11px;
+            margin-right: 5px;
+        }
+
+        .config-item {
+            cursor: pointer;
+            padding: 15px;
+            border: 1px solid var(--border-color);
+            margin-bottom: 10px;
+            border-radius: 8px;
+            background: white;
+            transition: all 0.3s ease;
+        }
+
+        .config-item:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 20px rgba(0, 0, 0, 0.1);
+        }
+
+        .header-row {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            margin-bottom: 10px;
+            padding: 10px;
+            background: #f8f9fa;
+            border-radius: 6px;
+        }
+
+        .header-key,
+        .header-value {
+            flex: 1;
+        }
+
+        .btn-gradient {
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            transition: all 0.3s ease;
+        }
+
+        .btn-gradient:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            color: white;
+        }
+
+        .form-control:focus {
+            border-color: #667eea;
+            box-shadow: 0 0 0 0.2rem rgba(102, 126, 234, 0.25);
+        }
+
+        .stats-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+            gap: 15px;
+            margin-bottom: 20px;
+        }
+
+        .stat-card {
+            background: white;
+            padding: 20px;
+            border-radius: 8px;
+            text-align: center;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.08);
+        }
+
+        .stat-number {
+            font-size: 24px;
+            font-weight: 700;
+            color: #667eea;
+        }
+
+        .stat-label {
+            color: #6c757d;
+            font-size: 14px;
+            margin-top: 5px;
+        }
+
+        .mobile-toggle {
+            display: none;
+            position: fixed;
+            top: 20px;
+            left: 20px;
+            z-index: 1001;
+            background: var(--sidebar-bg);
+            color: white;
+            border: none;
+            padding: 10px;
+            border-radius: 6px;
+        }
+
+        @media (max-width: 768px) {
+            .sidebar {
+                transform: translateX(-100%);
+            }
+
+            .sidebar.show {
+                transform: translateX(0);
+            }
+
+            .main-content {
+                margin-left: 0;
+                padding: 60px 15px 15px;
+            }
+
+            .mobile-toggle {
+                display: block;
+            }
+
+            .connection-status {
+                position: static;
+                margin-top: 0;
+            }
+        }
+
+        .json-viewer {
+            background: #1a1d23;
+            color: #e4e6ea;
+            padding: 15px;
+            border-radius: 8px;
+            font-family: 'Fira Code', 'Courier New', monospace;
+            font-size: 12px;
+            max-height: 300px;
+            overflow-y: auto;
+        }
+
+        .floating-actions {
+            position: fixed;
+            bottom: 20px;
+            right: 20px;
+            display: flex;
+            flex-direction: column;
+            gap: 10px;
+        }
+
+        .floating-btn {
+            width: 50px;
+            height: 50px;
+            border-radius: 50%;
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            color: white;
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+            transition: all 0.3s ease;
+        }
+
+        .floating-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 6px 20px rgba(102, 126, 234, 0.6);
+        }
+    </style>
+</head>
+
+<body>
+    <!-- Mobile Toggle Button -->
+    <button class="mobile-toggle" id="mobileToggle">
+        <i class="fas fa-bars"></i>
+    </button>
+
+    <!-- Sidebar -->
+    <nav class="sidebar" id="sidebar">
+        <div class="sidebar-header">
+            <h3><i class="fas fa-plug"></i>T2RUN WebSocket Pro</h3>
+            <small >Professional WebSocket Tool</small>
+        </div>
+
+        <div class="sidebar-nav">
+            <a href="#" class="nav-link active" data-tab="connection">
+                <i class="fas fa-network-wired"></i> Connection
+            </a>
+            <a href="#" class="nav-link" data-tab="messages">
+                <i class="fas fa-comments"></i> Messages
+            </a>
+            <a href="#" class="nav-link" data-tab="configs">
+                <i class="fas fa-cog"></i> Configurations
+            </a>
+            <a href="#" class="nav-link" data-tab="headers">
+                <i class="fas fa-code"></i> Headers
+            </a>
+            <a href="#" class="nav-link" data-tab="stats">
+                <i class="fas fa-chart-line"></i> Statistics
+            </a>
+        </div>
+    </nav>
+
+    <!-- Main Content -->
+    <div class="main-content">
+        <!-- Connection Status Bar -->
+        <div class="connection-status">
+            <div class="row align-items-center">
+                <div class="col-md-6">
+                    <div class="d-flex align-items-center">
+                        <span class="status-indicator status-disconnected" id="statusIndicator"></span>
+                        <div>
+                            <strong id="statusText">Disconnected</strong>
+                            <div class="small text-muted" id="statusUrl">Not connected</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-6 text-end">
+                    <button type="button" class="btn btn-success btn-sm me-2" id="connectBtn">
+                        <i class="fas fa-play"></i> Connect
+                    </button>
+                    <button type="button" class="btn btn-danger btn-sm" id="disconnectBtn" disabled>
+                        <i class="fas fa-stop"></i> Disconnect
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Connection Tab -->
+        <div class="tab-content active" id="connection">
+            <div class="row">
+                <div class="col-lg-8">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-network-wired"></i> Connection Settings</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <label for="websocketUrl" class="form-label">WebSocket URL</label>
+                                <input type="text" class="form-control" id="websocketUrl"
+                                    placeholder="ws://localhost:8080 or wss://echo.websocket.org"
+                                    value="wss://echo.websocket.org">
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="subprotocols" class="form-label">Subprotocols</label>
+                                <input type="text" class="form-control" id="subprotocols" placeholder="chat, superchat">
+                                <div class="form-text">Comma-separated list of subprotocols</div>
+                            </div>
+
+                            <div class="mb-3">
+                                <label for="cookieString" class="form-label">Cookie String</label>
+                                <input type="text" class="form-control" id="cookieString"
+                                    placeholder="sessionId=abc123; userId=456">
+                                <div class="form-text">Cookies in standard HTTP format</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-4">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-info-circle"></i> Connection Info</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <small class="text-muted">Ready State</small>
+                                <div id="readyState">-</div>
+                            </div>
+                            <div class="mb-3">
+                                <small class="text-muted">Protocol</small>
+                                <div id="protocol">-</div>
+                            </div>
+                            <div class="mb-3">
+                                <small class="text-muted">Extensions</small>
+                                <div id="extensions">-</div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Messages Tab -->
+        <div class="tab-content" id="messages">
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-paper-plane"></i> Send Message</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <textarea class="form-control" id="messageInput" rows="4"
+                                    placeholder="Enter your message here..."></textarea>
+                            </div>
+                            <div class="d-flex gap-2">
+                                <button type="button" class="btn btn-gradient" id="sendBtn" disabled>
+                                    <i class="fas fa-paper-plane"></i> Send
+                                </button>
+                                <button type="button" class="btn btn-outline-secondary" id="pingBtn" disabled>
+                                    <i class="fas fa-heartbeat"></i> Ping
+                                </button>
+                                <button type="button" class="btn btn-outline-warning" id="clearLogBtn">
+                                    <i class="fas fa-trash"></i> Clear Log
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-list"></i> Message Log</h5>
+                        </div>
+                        <div class="card-body p-0">
+                            <div class="message-log" id="messageLog"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Configurations Tab -->
+        <div class="tab-content" id="configs">
+            <div class="row">
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-save"></i> Save Configuration</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="mb-3">
+                                <input type="text" class="form-control" id="configName"
+                                    placeholder="Configuration name">
+                            </div>
+                            <button type="button" class="btn btn-gradient w-100" id="saveConfigBtn">
+                                <i class="fas fa-save"></i> Save Current Configuration
+                            </button>
+                        </div>
+                    </div>
+
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-exchange-alt"></i> Import/Export</h5>
+                        </div>
+                        <div class="card-body">
+                            <div class="row">
+                                <div class="col-6">
+                                    <button type="button" class="btn btn-outline-secondary w-100" id="exportBtn">
+                                        <i class="fas fa-download"></i> Export
+                                    </button>
+                                </div>
+                                <div class="col-6">
+                                    <input type="file" class="form-control" id="importFile" accept=".json">
+                                    <button type="button" class="btn btn-outline-secondary w-100 mt-2" id="importBtn">
+                                        <i class="fas fa-upload"></i> Import
+                                    </button>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="col-lg-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5><i class="fas fa-list"></i> Saved Configurations</h5>
+                        </div>
+                        <div class="card-body">
+                            <div id="savedConfigs"></div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Headers Tab -->
+        <div class="tab-content" id="headers">
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-code"></i> Request Headers</h5>
+                </div>
+                <div class="card-body">
+                    <div id="headersContainer">
+                        <div class="header-row">
+                            <input type="text" class="form-control header-key" placeholder="Header Name">
+                            <input type="text" class="form-control header-value" placeholder="Header Value">
+                            <button type="button" class="btn btn-outline-danger remove-header">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        </div>
+                    </div>
+                    <button type="button" class="btn btn-outline-primary" id="addHeader">
+                        <i class="fas fa-plus"></i> Add Header
+                    </button>
+                </div>
+            </div>
+        </div>
+
+        <!-- Statistics Tab -->
+        <div class="tab-content" id="stats">
+            <div class="stats-grid">
+                <div class="stat-card">
+                    <div class="stat-number" id="messagesSent">0</div>
+                    <div class="stat-label">Messages Sent</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="messagesReceived">0</div>
+                    <div class="stat-label">Messages Received</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="connectionTime">0s</div>
+                    <div class="stat-label">Connection Time</div>
+                </div>
+                <div class="stat-card">
+                    <div class="stat-number" id="dataTransferred">0 KB</div>
+                    <div class="stat-label">Data Transferred</div>
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-header">
+                    <h5><i class="fas fa-chart-line"></i> Connection History</h5>
+                </div>
+                <div class="card-body">
+                    <div id="connectionHistory"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Floating Actions -->
+    <div class="floating-actions">
+        <button class="floating-btn" id="scrollToTop" title="Scroll to top">
+            <i class="fas fa-arrow-up"></i>
+        </button>
+    </div>
+
+    <!-- Footer-->
+    <footer id="footer" class="py-4 bg-light">
+        <div class="container">
+            <p class="m-0 text-center text-black-70">100% transparent and safe.</p>
+            <p class="m-0 text-center text-black-60">All data entered here are safe. All conversions are undoubtedly
+                done through client side scripts.</p>
+            <P class="text-center">
+                <a href="https://t2run.org/tools/privacy-policy.html">Privacy Policy</a>
+            </P>
+            <p class="m-0 text-center text-black-50">Copyright &copy;
+                <script type="text/javascript">
+                    document.write(new Date().getFullYear());
+                </script> t2run
+            </p>
+        </div>
+    </footer>
+
+    <script src="https://cdnjs.cloudflare.com/ajax/libs/bootstrap/5.3.0/js/bootstrap.bundle.min.js"></script>
+    <script>
+        class WebSocketTesterPro {
+            constructor() {
+                this.ws = null;
+                this.configs = JSON.parse(localStorage.getItem('wsConfigs') || '[]');
+                this.stats = {
+                    messagesSent: 0,
+                    messagesReceived: 0,
+                    connectionStartTime: null,
+                    dataTransferred: 0
+                };
+                this.connectionHistory = JSON.parse(localStorage.getItem('wsConnectionHistory') || '[]');
+                this.initializeEventListeners();
+                this.loadSavedConfigs();
+                this.updateStats();
+                this.startConnectionTimer();
+            }
+
+            initializeEventListeners() {
+                // Sidebar navigation
+                document.querySelectorAll('.nav-link').forEach(link => {
+                    link.addEventListener('click', (e) => {
+                        e.preventDefault();
+                        this.switchTab(link.dataset.tab);
+                    });
+                });
+
+                // Mobile toggle
+                document.getElementById('mobileToggle').addEventListener('click', () => {
+                    document.getElementById('sidebar').classList.toggle('show');
+                });
+
+                // Connection buttons
+                document.getElementById('connectBtn').addEventListener('click', () => this.connect());
+                document.getElementById('disconnectBtn').addEventListener('click', () => this.disconnect());
+                document.getElementById('clearLogBtn').addEventListener('click', () => this.clearLog());
+
+                // Message buttons
+                document.getElementById('sendBtn').addEventListener('click', () => this.sendMessage());
+                document.getElementById('pingBtn').addEventListener('click', () => this.sendPing());
+
+                // Configuration buttons
+                document.getElementById('saveConfigBtn').addEventListener('click', () => this.saveConfig());
+                document.getElementById('exportBtn').addEventListener('click', () => this.exportConfigs());
+                document.getElementById('importBtn').addEventListener('click', () => this.importConfigs());
+
+                // Header management
+                document.getElementById('addHeader').addEventListener('click', () => this.addHeaderRow());
+
+                // Floating actions
+                document.getElementById('scrollToTop').addEventListener('click', () => {
+                    window.scrollTo({ top: 0, behavior: 'smooth' });
+                });
+
+                // Enter key for sending messages
+                document.getElementById('messageInput').addEventListener('keypress', (e) => {
+                    if (e.key === 'Enter' && !e.shiftKey) {
+                        e.preventDefault();
+                        this.sendMessage();
+                    }
+                });
+
+                // Remove header buttons
+                document.addEventListener('click', (e) => {
+                    if (e.target.closest('.remove-header')) {
+                        e.target.closest('.header-row').remove();
+                    }
+                });
+
+                // Close sidebar on mobile when clicking outside
+                document.addEventListener('click', (e) => {
+                    if (window.innerWidth <= 768) {
+                        const sidebar = document.getElementById('sidebar');
+                        if (!sidebar.contains(e.target) && !e.target.closest('.mobile-toggle')) {
+                            sidebar.classList.remove('show');
+                        }
+                    }
+                });
+            }
+
+            switchTab(tabName) {
+                // Update navigation
+                document.querySelectorAll('.nav-link').forEach(link => {
+                    link.classList.remove('active');
+                });
+                document.querySelector(`[data-tab="${tabName}"]`).classList.add('active');
+
+                // Update content
+                document.querySelectorAll('.tab-content').forEach(content => {
+                    content.classList.remove('active');
+                });
+                document.getElementById(tabName).classList.add('active');
+
+                // Close mobile sidebar
+                if (window.innerWidth <= 768) {
+                    document.getElementById('sidebar').classList.remove('show');
+                }
+            }
+
+            addHeaderRow() {
+                const container = document.getElementById('headersContainer');
+                const row = document.createElement('div');
+                row.className = 'header-row';
+                row.innerHTML = `
+                    <input type="text" class="form-control header-key" placeholder="Header Name">
+                    <input type="text" class="form-control header-value" placeholder="Header Value">
+                    <button type="button" class="btn btn-outline-danger remove-header">
+                        <i class="fas fa-trash"></i>
+                    </button>
+                `;
+                container.appendChild(row);
+            }
+
+            getHeaders() {
+                const headers = {};
+                const headerRows = document.querySelectorAll('.header-row');
+
+                headerRows.forEach(row => {
+                    const key = row.querySelector('.header-key').value.trim();
+                    const value = row.querySelector('.header-value').value.trim();
+                    if (key && value) {
+                        headers[key] = value;
+                    }
+                });
+
+                const cookieString = document.getElementById('cookieString').value.trim();
+                if (cookieString) {
+                    headers['Cookie'] = cookieString;
+                }
+
+                return headers;
+            }
+
+            connect() {
+                const url = document.getElementById('websocketUrl').value.trim();
+                const subprotocols = document.getElementById('subprotocols').value.trim();
+
+                if (!url) {
+                    this.addLogMessage('Please enter a WebSocket URL', 'error');
+                    return;
+                }
+
+                this.updateStatus('connecting', 'Connecting...', url);
+                this.stats.connectionStartTime = new Date();
+
+                try {
+                    const protocols = subprotocols ? subprotocols.split(',').map(p => p.trim()) : [];
+                    this.ws = new WebSocket(url, protocols);
+
+                    this.ws.onopen = (event) => {
+                        this.updateStatus('connected', 'Connected', url);
+                        this.addLogMessage(`Connected to ${url}`, 'info');
+                        this.updateConnectionInfo();
+                        this.enableMessageControls(true);
+
+                        // Add to connection history
+                        this.connectionHistory.unshift({
+                            url: url,
+                            timestamp: new Date().toISOString(),
+                            status: 'connected'
+                        });
+                        this.saveConnectionHistory();
+                    };
+
+                    this.ws.onmessage = (event) => {
+                        this.stats.messagesReceived++;
+                        this.stats.dataTransferred += new Blob([event.data]).size;
+                        this.addLogMessage(`← ${event.data}`, 'received');
+                        this.updateStats();
+                    };
+
+                    this.ws.onclose = (event) => {
+                        this.updateStatus('disconnected', 'Disconnected', 'Not connected');
+                        this.addLogMessage(`Connection closed. Code: ${event.code}, Reason: ${event.reason || 'None'}`, 'info');
+                        this.enableMessageControls(false);
+                        this.updateConnectionInfo();
+
+                        // Add to connection history
+                        this.connectionHistory.unshift({
+                            url: url,
+                            timestamp: new Date().toISOString(),
+                            status: 'disconnected',
+                            code: event.code,
+                            reason: event.reason
+                        });
+                        this.saveConnectionHistory();
+                    };
+
+                    this.ws.onerror = (error) => {
+                        this.addLogMessage('Connection error occurred', 'error');
+                        this.updateStatus('disconnected', 'Error', 'Connection failed');
+                        this.enableMessageControls(false);
+                    };
+
+                } catch (error) {
+                    this.addLogMessage(`Connection failed: ${error.message}`, 'error');
+                    this.updateStatus('disconnected', 'Error', 'Connection failed');
+                    this.enableMessageControls(false);
+                }
+            }
+
+            disconnect() {
+                if (this.ws) {
+                    this.ws.close();
+                    this.ws = null;
+                }
+            }
+
+            updateConnectionInfo() {
+                const readyStateMap = {
+                    0: 'CONNECTING',
+                    1: 'OPEN',
+                    2: 'CLOSING',
+                    3: 'CLOSED'
+                };
+
+                document.getElementById('readyState').textContent =
+                    this.ws ? readyStateMap[this.ws.readyState] : 'CLOSED';
+                document.getElementById('protocol').textContent =
+                    this.ws && this.ws.protocol ? this.ws.protocol : 'None';
+                document.getElementById('extensions').textContent =
+                    this.ws && this.ws.extensions ? this.ws.extensions : 'None';
+            }
+
+            enableMessageControls(enabled) {
+                document.getElementById('connectBtn').disabled = enabled;
+                document.getElementById('disconnectBtn').disabled = !enabled;
+                document.getElementById('sendBtn').disabled = !enabled;
+                document.getElementById('pingBtn').disabled = !enabled;
+            }
+
+            sendMessage() {
+                if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+                    this.addLogMessage('Not connected to WebSocket', 'error');
+                    return;
+                }
+
+                const message = document.getElementById('messageInput').value;
+                if (!message) {
+                    this.addLogMessage('Please enter a message to send', 'error');
+                    return;
+                }
+
+                try {
+                    this.ws.send(message);
+                    this.stats.messagesSent++;
+                    this.stats.dataTransferred += new Blob([message]).size;
+                    this.addLogMessage(`→ ${message}`, 'sent');
+                    this.updateStats();
+                    document.getElementById('messageInput').value = '';
+                } catch (error) {
+                    this.addLogMessage(`Send failed: ${error.message}`, 'error');
+                }
+            }
+
+            sendPing() {
+                if (!this.ws || this.ws.readyState !== WebSocket.OPEN) {
+                    this.addLogMessage('Not connected to WebSocket', 'error');
+                    return;
+                }
+
+                try {
+                    this.ws.send('ping');
+                    this.stats.messagesSent++;
+                    this.stats.dataTransferred += 4; // 'ping' is 4 bytes
+                    this.addLogMessage('→ ping', 'sent');
+                    this.updateStats();
+                } catch (error) {
+                    this.addLogMessage(`Ping failed: ${error.message}`, 'error');
+                }
+            }
+
+            updateStatus(status, text, url) {
+                const indicator = document.getElementById('statusIndicator');
+                const statusText = document.getElementById('statusText');
+                const statusUrl = document.getElementById('statusUrl');
+
+                indicator.className = `status-indicator status-${status}`;
+                statusText.textContent = text;
+                statusUrl.textContent = url || 'Not connected';
+            }
+
+            addLogMessage(message, type) {
+                const log = document.getElementById('messageLog');
+                const timestamp = new Date().toLocaleTimeString();
+                const messageDiv = document.createElement('div');
+                messageDiv.className = `message-${type}`;
+                messageDiv.innerHTML = `<span class="timestamp">[${timestamp}]</span> ${message}`;
+                log.appendChild(messageDiv);
+                log.scrollTop = log.scrollHeight;
+            }
+
+            clearLog() {
+                document.getElementById('messageLog').innerHTML = '';
+            }
+
+            updateStats() {
+                document.getElementById('messagesSent').textContent = this.stats.messagesSent;
+                document.getElementById('messagesReceived').textContent = this.stats.messagesReceived;
+                document.getElementById('dataTransferred').textContent =
+                    `${(this.stats.dataTransferred / 1024).toFixed(2)} KB`;
+            }
+
+            startConnectionTimer() {
+                setInterval(() => {
+                    if (this.ws && this.ws.readyState === WebSocket.OPEN && this.stats.connectionStartTime) {
+                        const elapsed = Math.floor((new Date() - this.stats.connectionStartTime) / 1000);
+                        document.getElementById('connectionTime').textContent = `${elapsed}s`;
+                    } else {
+                        document.getElementById('connectionTime').textContent = '0s';
+                    }
+                }, 1000);
+            }
+
+            saveConnectionHistory() {
+                // Keep only last 50 connections
+                this.connectionHistory = this.connectionHistory.slice(0, 50);
+                localStorage.setItem('wsConnectionHistory', JSON.stringify(this.connectionHistory));
+                this.displayConnectionHistory();
+            }
+
+            displayConnectionHistory() {
+                const container = document.getElementById('connectionHistory');
+                container.innerHTML = '';
+
+                this.connectionHistory.forEach((connection, index) => {
+                    const historyItem = document.createElement('div');
+                    historyItem.className = 'config-item';
+                    historyItem.innerHTML = `
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>${connection.url}</strong><br>
+                                <small class="text-muted">${new Date(connection.timestamp).toLocaleString()}</small>
+                            </div>
+                            <span class="badge ${connection.status === 'connected' ? 'bg-success' : 'bg-danger'}">
+                                ${connection.status}
+                            </span>
+                        </div>
+                    `;
+                    container.appendChild(historyItem);
+                });
+            }
+
+            getCurrentConfig() {
+                const headers = {};
+                const headerRows = document.querySelectorAll('.header-row');
+
+                headerRows.forEach(row => {
+                    const key = row.querySelector('.header-key').value.trim();
+                    const value = row.querySelector('.header-value').value.trim();
+                    if (key && value) {
+                        headers[key] = value;
+                    }
+                });
+
+                return {
+                    url: document.getElementById('websocketUrl').value.trim(),
+                    subprotocols: document.getElementById('subprotocols').value.trim(),
+                    headers: headers,
+                    cookie: document.getElementById('cookieString').value.trim(),
+                    timestamp: new Date().toISOString()
+                };
+            }
+
+            loadConfig(config) {
+                document.getElementById('websocketUrl').value = config.url || '';
+                document.getElementById('subprotocols').value = config.subprotocols || '';
+                document.getElementById('cookieString').value = config.cookie || '';
+
+                // Clear existing headers
+                const container = document.getElementById('headersContainer');
+                container.innerHTML = '';
+
+                // Add headers
+                if (config.headers && Object.keys(config.headers).length > 0) {
+                    Object.entries(config.headers).forEach(([key, value]) => {
+                        const row = document.createElement('div');
+                        row.className = 'header-row';
+                        row.innerHTML = `
+                            <input type="text" class="form-control header-key" placeholder="Header Name" value="${key}">
+                            <input type="text" class="form-control header-value" placeholder="Header Value" value="${value}">
+                            <button type="button" class="btn btn-outline-danger remove-header">
+                                <i class="fas fa-trash"></i>
+                            </button>
+                        `;
+                        container.appendChild(row);
+                    });
+                } else {
+                    // Add at least one empty row
+                    this.addHeaderRow();
+                }
+
+                // Switch to connection tab
+                this.switchTab('connection');
+            }
+
+            saveConfig() {
+                const configName = document.getElementById('configName').value.trim();
+                if (!configName) {
+                    alert('Please enter a configuration name');
+                    return;
+                }
+
+                const config = this.getCurrentConfig();
+                config.name = configName;
+
+                // Remove existing config with same name
+                this.configs = this.configs.filter(c => c.name !== configName);
+
+                // Add new config
+                this.configs.push(config);
+
+                // Save to localStorage
+                localStorage.setItem('wsConfigs', JSON.stringify(this.configs));
+
+                // Clear the input
+                document.getElementById('configName').value = '';
+
+                // Refresh the list
+                this.loadSavedConfigs();
+
+                this.addLogMessage(`Configuration "${configName}" saved`, 'info');
+            }
+
+            loadSavedConfigs() {
+                const container = document.getElementById('savedConfigs');
+                container.innerHTML = '';
+
+                if (this.configs.length === 0) {
+                    container.innerHTML = '<div class="text-muted text-center">No saved configurations</div>';
+                    return;
+                }
+
+                this.configs.forEach((config, index) => {
+                    const configDiv = document.createElement('div');
+                    configDiv.className = 'config-item';
+                    configDiv.innerHTML = `
+                        <div class="d-flex justify-content-between align-items-center">
+                            <div>
+                                <strong>${config.name}</strong><br>
+                                <small class="text-muted">${config.url}</small><br>
+                                <small class="text-muted">${new Date(config.timestamp).toLocaleString()}</small>
+                            </div>
+                            <div>
+                                <button class="btn btn-sm btn-outline-primary me-1" onclick="wsTester.loadConfig(wsTester.configs[${index}])">
+                                    <i class="fas fa-download"></i>
+                                </button>
+                                <button class="btn btn-sm btn-outline-danger" onclick="wsTester.deleteConfig(${index})">
+                                    <i class="fas fa-trash"></i>
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                    container.appendChild(configDiv);
+                });
+            }
+
+            deleteConfig(index) {
+                if (confirm('Are you sure you want to delete this configuration?')) {
+                    this.configs.splice(index, 1);
+                    localStorage.setItem('wsConfigs', JSON.stringify(this.configs));
+                    this.loadSavedConfigs();
+                }
+            }
+
+            exportConfigs() {
+                const exportData = {
+                    configurations: this.configs,
+                    connectionHistory: this.connectionHistory,
+                    exportDate: new Date().toISOString()
+                };
+
+                const dataStr = JSON.stringify(exportData, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'websocket-configs.json';
+                link.click();
+                URL.revokeObjectURL(url);
+            }
+
+            importConfigs() {
+                const fileInput = document.getElementById('importFile');
+                const file = fileInput.files[0];
+
+                if (!file) {
+                    alert('Please select a file to import');
+                    return;
+                }
+
+                const reader = new FileReader();
+                reader.onload = (e) => {
+                    try {
+                        const importedData = JSON.parse(e.target.result);
+
+                        // Handle both old format (array) and new format (object)
+                        let importedConfigs = [];
+                        if (Array.isArray(importedData)) {
+                            importedConfigs = importedData;
+                        } else if (importedData.configurations) {
+                            importedConfigs = importedData.configurations;
+                        }
+
+                        if (importedConfigs.length > 0) {
+                            this.configs = [...this.configs, ...importedConfigs];
+                            localStorage.setItem('wsConfigs', JSON.stringify(this.configs));
+                            this.loadSavedConfigs();
+                            this.addLogMessage(`Imported ${importedConfigs.length} configurations`, 'info');
+                        } else {
+                            alert('No configurations found in the file');
+                        }
+                    } catch (error) {
+                        alert('Error reading configuration file: ' + error.message);
+                    }
+                };
+                reader.readAsText(file);
+
+                // Clear the file input
+                fileInput.value = '';
+            }
+        }
+
+        // Initialize the WebSocket tester
+        const wsTester = new WebSocketTesterPro();
+
+        // Load connection history on startup
+        wsTester.displayConnectionHistory();
+    </script>
+
+</body>
+
+</html>
